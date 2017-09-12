@@ -135,10 +135,20 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 	cudaMalloc((void**)&md, sizeof(bool));
 
 	int gridWidth = static_cast<int>(sqrt(static_cast<double>(N) / BLOCK)) + 1;
-	dim3 grid(gridWidth, gridWidth, 1);
-	dim3 threads(BLOCK, 1, 1);
+	dim3 grid(1, 1);
+	dim3 threads(BLOCK,BLOCK);
 
 	init_CCL<<<grid, threads>>>(Ld, Rd,width,height, N);
+
+	int* t = (int*)malloc(sizeof(int) * BLOCK * BLOCK);
+
+	cudaMemcpy(t, Ld, sizeof(int)*width*height, cudaMemcpyDeviceToHost);
+	for(auto i = 0;i<BLOCK * BLOCK;++i)
+	{
+		cout << t[i] << " ";
+		if ((i+1) % BLOCK == 0)
+			cout << endl;
+	}
 
 	while (true)
 	{
@@ -202,6 +212,7 @@ int main()
 
 		cout << endl;
 	}
+	cout<<endl;
 
 	auto degree_of_connectivity = 4;
 	auto threshold = 0;
