@@ -76,7 +76,8 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int 
 		if (id + W + 1 < N  && diff(Did, D[id + W + 1]) <= th) label = IMin(label, L[id + W + 1]);
 	}
 
-	if (label < L[id]) {
+	if (label < L[id])
+	{
 		R[L[id]] = label;
 		*m = true;
 	}
@@ -89,8 +90,13 @@ __global__ void analysis(int D[], int L[], int R[], int N)
 
 	int label = L[id];
 	int ref;
-	if (label == id) {
-		do { label = R[ref = label]; } while (ref ^ label);
+	if (label == id)
+	{
+		do
+		{
+			label = R[ref = label];
+		}
+		while (ref ^ label);
 		R[id] = label;
 	}
 }
@@ -194,19 +200,22 @@ int main()
 	CCL ccl;
 
 	auto start = get_time();
-	auto result(ccl.cuda_ccl(image, width, degree_of_connectivity, threshold));
+	auto result = ccl.cuda_ccl(image, width, degree_of_connectivity, threshold);
 	auto end = get_time();
-	std::cerr << "Time: " << end - start << std::endl;
 
-	std::cout << result.size() << std::endl; /// number of pixels
-	std::cout << width << std::endl; /// width
+	cerr << "Time: " << end - start << endl;
+
+	cout << result.size() << endl;
+	cout << width << endl;
 
 	for (auto i = 0; i < static_cast<int>(result.size()) / width; i++)
 	{
 		for (auto j = 0; j < width; j++)
-			std::cout << result[i*width + j] << " ";
-		std::cout << std::endl;
+			cout << result[i * width + j] << " ";
+
+		cout << endl;
 	}
+
 	system("Pause");
     return 0;
 }
