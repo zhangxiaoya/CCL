@@ -188,22 +188,23 @@ int main()
 
 	std::vector<int> image(data, data + width * height);
 
-	auto W = 8, degree_of_connectivity = 4, threshold = 0;
+	auto degree_of_connectivity = 4;
+	auto threshold = 0;
 
 	CCL ccl;
 
 	auto start = get_time();
-	auto result(ccl.cuda_ccl(image, W, degree_of_connectivity, threshold));
+	auto result(ccl.cuda_ccl(image, width, degree_of_connectivity, threshold));
 	auto end = get_time();
 	std::cerr << "Time: " << end - start << std::endl;
 
 	std::cout << result.size() << std::endl; /// number of pixels
-	std::cout << W << std::endl; /// width
+	std::cout << width << std::endl; /// width
 
-	for (auto i = 0; i < static_cast<int>(result.size()) / W; i++)
+	for (auto i = 0; i < static_cast<int>(result.size()) / width; i++)
 	{
-		for (auto j = 0; j < W; j++)
-			std::cout << result[i*W + j] << " ";
+		for (auto j = 0; j < width; j++)
+			std::cout << result[i*width + j] << " ";
 		std::cout << std::endl;
 	}
 	system("Pause");
