@@ -23,7 +23,11 @@ __device__ int IMin(int a, int b)
 
 __global__ void init_CCL(int L[], int R[], int width, int height, int N)
 {
-	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int id = x + y * blockDim.x * gridDim.x;
 	if (id >= N) return;
 
 	L[id] = R[id] = id;
@@ -36,7 +40,13 @@ __device__ int diff(int d1, int d2)
 
 __global__ void scanning(int D[], int L[], int R[], bool* m, int N, int W, int th)
 {
-	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int id = x + y * blockDim.x * gridDim.x;
 	if (id >= N) return;
 
 	int Did = D[id];
@@ -55,7 +65,13 @@ __global__ void scanning(int D[], int L[], int R[], bool* m, int N, int W, int t
 
 __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int th)
 {
-	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int id = x + y * blockDim.x * gridDim.x;
+
 	if (id >= N) return;
 
 	int Did = D[id];
@@ -83,7 +99,13 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int 
 
 __global__ void analysis(int D[], int L[], int R[], int N)
 {
-	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int id = x + y * blockDim.x * gridDim.x;
+
 	if (id >= N) return;
 
 	int label = L[id];
@@ -101,7 +123,12 @@ __global__ void analysis(int D[], int L[], int R[], int N)
 
 __global__ void labeling(int D[], int L[], int R[], int N)
 {
-	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	//	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
+	int id = x + y * blockDim.x * gridDim.x;
 	if (id >= N) return;
 
 	L[id] = R[R[L[id]]];
