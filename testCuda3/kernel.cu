@@ -152,18 +152,19 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 	cudaMalloc((void**)&md, sizeof(bool));
 
 	int gridWidth = static_cast<int>(sqrt(static_cast<double>(N) / BLOCK)) + 1;
-	dim3 grid(1, 1);
+
+	dim3 grid((width + BLOCK - 1)/ BLOCK, (height + BLOCK -1)/BLOCK);
 	dim3 threads(BLOCK,BLOCK);
 
 	init_CCL<<<grid, threads>>>(Ld, Rd,width,height, N);
 
-	int* t = (int*)malloc(sizeof(int) * BLOCK * BLOCK);
+	int* t = (int*)malloc(sizeof(int) * width * height);
 
 	cudaMemcpy(t, Ld, sizeof(int)*width*height, cudaMemcpyDeviceToHost);
-	for(auto i = 0;i<BLOCK * BLOCK;++i)
+	for(auto i = 0;i<width * height;++i)
 	{
 		cout << t[i] << " ";
-		if ((i+1) % BLOCK == 0)
+		if ((i+1) % width == 0)
 			cout << endl;
 	}
 
@@ -204,19 +205,19 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 
 int main()
 {
-	const int width = 8;
+	const int width = 10;
 	const int height = 8;
 
 	int data[width * height] =
 	{
-		1, 1, 1, 1, 1, 1, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 0,
-		0, 0, 0, 1, 1, 1, 1, 0,
-		0, 0, 0, 0, 1, 1, 1, 1,
-		0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 1, 1, 1, 1, 1,
-		0, 1, 1, 1, 1, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0
+		1,1,1, 1, 1, 1, 1, 1, 0, 0,
+		0,0,0, 0, 0, 1, 1, 1, 1, 0,
+		0,0,0, 0, 0, 1, 1, 1, 1, 0,
+		0,0,0, 0, 0, 0, 1, 1, 1, 1,
+		0,0,0, 0, 0, 0, 0, 1, 1, 1,
+		0,0,0, 0, 0, 1, 1, 1, 1, 1,
+		0,0,0, 1, 1, 1, 1, 0, 0, 0,
+		0,0,0, 1, 0, 0, 0, 0, 0, 0
 	};
 
 	vector<int> image(data, data + width * height);
