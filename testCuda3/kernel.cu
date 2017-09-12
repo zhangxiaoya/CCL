@@ -1,9 +1,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <cstdlib>
-
 #include <ctime>
 #include <vector>
 #include <ostream>
@@ -23,7 +21,7 @@ __device__ int IMin(int a, int b)
 	return a < b ? a : b;
 }
 
-__global__ void init_CCL(int L[], int R[], int N)
+__global__ void init_CCL(int L[], int R[], int width, int height, int N)
 {
 	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
 	if (id >= N) return;
@@ -112,7 +110,7 @@ __global__ void labeling(int D[], int L[], int R[], int N)
 class CCL
 {
 public:
-	std::vector<int> cuda_ccl(std::vector<int>& image, int W, int degree_of_connectivity, int threshold);
+	std::vector<int> cuda_ccl(std::vector<int>& image, int W, int height, int degree_of_connectivity, int threshold);
 
 private:
 	int* Dd;
@@ -120,8 +118,9 @@ private:
 	int* Rd;
 };
 
-vector<int> CCL::cuda_ccl(std::vector<int>& image, int W, int degree_of_connectivity, int threshold)
+vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int degree_of_connectivity, int threshold)
 {
+
 	vector<int> result;
 	int* D = static_cast<int*>(&image[0]);
 	int N = image.size();
@@ -135,21 +134,21 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int W, int degree_of_connecti
 	bool* md;
 	cudaMalloc((void**)&md, sizeof(bool));
 
-	int width = static_cast<int>(sqrt(static_cast<double>(N) / BLOCK)) + 1;
-	dim3 grid(width, width, 1);
+	int gridWidth = static_cast<int>(sqrt(static_cast<double>(N) / BLOCK)) + 1;
+	dim3 grid(gridWidth, gridWidth, 1);
 	dim3 threads(BLOCK, 1, 1);
 
-	init_CCL<<<grid, threads>>>(Ld, Rd, N);
+	init_CCL<<<grid, threads>>>(Ld, Rd,width,height, N);
 
-	for (;;)
+	while (true)
 	{
 		bool m = false;
 		cudaMemcpy(md, &m, sizeof(bool), cudaMemcpyHostToDevice);
 
 		if (degree_of_connectivity == 4)
-			scanning<<<grid, threads>>>(Dd, Ld, Rd, md, N, W, threshold);
+			scanning<<<grid, threads>>>(Dd, Ld, Rd, md, N, width, threshold);
 		else
-			scanning8<<<grid, threads >>>(Dd, Ld, Rd, md, N, W, threshold);
+			scanning8<<<grid, threads >>>(Dd, Ld, Rd, md, N, width, threshold);
 
 		cudaMemcpy(&m, md, sizeof(bool), cudaMemcpyDeviceToHost);
 
@@ -164,6 +163,7 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int W, int degree_of_connecti
 			break;
 		}
 	}
+
 
 	cudaMemcpy(D, Ld, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
@@ -192,7 +192,16 @@ int main()
 		0, 1, 0, 0, 0, 0, 0, 0
 	};
 
-	std::vector<int> image(data, data + width * height);
+	vector<int> image(data, data + width * height);
+
+	cout << "binary image" <<endl;
+	for (auto i = 0; i < static_cast<int>(image.size()) / width; i++)
+	{
+		for (auto j = 0; j < width; j++)
+			cout << image[i * width + j] << " ";
+
+		cout << endl;
+	}
 
 	auto degree_of_connectivity = 4;
 	auto threshold = 0;
@@ -200,7 +209,7 @@ int main()
 	CCL ccl;
 
 	auto start = get_time();
-	auto result = ccl.cuda_ccl(image, width, degree_of_connectivity, threshold);
+	auto result = ccl.cuda_ccl(image, width, height, degree_of_connectivity, threshold);
 	auto end = get_time();
 
 	cerr << "Time: " << end - start << endl;
