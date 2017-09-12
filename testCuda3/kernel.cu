@@ -18,6 +18,11 @@ inline double get_time()
 	return static_cast<double>(std::clock()) / CLOCKS_PER_SEC;
 }
 
+__device__ int IMin(int a, int b)
+{
+	return a < b ? a : b;
+}
+
 __global__ void init_CCL(int L[], int R[], int N)
 {
 	int id = blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x + threadIdx.x;
@@ -38,11 +43,11 @@ __global__ void scanning(int D[], int L[], int R[], bool* m, int N, int W, int t
 
 	int Did = D[id];
 	int label = N;
-	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = min(label, L[id - W]);
-	if (id + W < N  && diff(Did, D[id + W]) <= th) label = min(label, L[id + W]);
+	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = IMin(label, L[id - W]);
+	if (id + W < N  && diff(Did, D[id + W]) <= th) label = IMin(label, L[id + W]);
 	int r = id % W;
-	if (r           && diff(Did, D[id - 1]) <= th) label = min(label, L[id - 1]);
-	if (r + 1 != W  && diff(Did, D[id + 1]) <= th) label = min(label, L[id + 1]);
+	if (r           && diff(Did, D[id - 1]) <= th) label = IMin(label, L[id - 1]);
+	if (r + 1 != W  && diff(Did, D[id + 1]) <= th) label = IMin(label, L[id + 1]);
 
 	if (label < L[id]) {
 		R[L[id]] = label;
@@ -57,18 +62,18 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int 
 
 	int Did = D[id];
 	int label = N;
-	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = min(label, L[id - W]);
-	if (id + W < N  && diff(Did, D[id + W]) <= th) label = min(label, L[id + W]);
+	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = IMin(label, L[id - W]);
+	if (id + W < N  && diff(Did, D[id + W]) <= th) label = IMin(label, L[id + W]);
 	int r = id % W;
 	if (r) {
-		if (diff(Did, D[id - 1]) <= th) label = min(label, L[id - 1]);
-		if (id - W - 1 >= 0 && diff(Did, D[id - W - 1]) <= th) label = min(label, L[id - W - 1]);
-		if (id + W - 1 < N  && diff(Did, D[id + W - 1]) <= th) label = min(label, L[id + W - 1]);
+		if (diff(Did, D[id - 1]) <= th) label = IMin(label, L[id - 1]);
+		if (id - W - 1 >= 0 && diff(Did, D[id - W - 1]) <= th) label = IMin(label, L[id - W - 1]);
+		if (id + W - 1 < N  && diff(Did, D[id + W - 1]) <= th) label = IMin(label, L[id + W - 1]);
 	}
 	if (r + 1 != W) {
-		if (diff(Did, D[id + 1]) <= th) label = min(label, L[id + 1]);
-		if (id - W + 1 >= 0 && diff(Did, D[id - W + 1]) <= th) label = min(label, L[id - W + 1]);
-		if (id + W + 1 < N  && diff(Did, D[id + W + 1]) <= th) label = min(label, L[id + W + 1]);
+		if (diff(Did, D[id + 1]) <= th) label = IMin(label, L[id + 1]);
+		if (id - W + 1 >= 0 && diff(Did, D[id - W + 1]) <= th) label = IMin(label, L[id - W + 1]);
+		if (id + W + 1 < N  && diff(Did, D[id + W + 1]) <= th) label = IMin(label, L[id + W + 1]);
 	}
 
 	if (label < L[id]) {
