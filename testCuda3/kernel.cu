@@ -21,13 +21,15 @@ __device__ int IMin(int a, int b)
 	return a < b ? a : b;
 }
 
-__global__ void init_CCL(int L[], int R[], int width, int height, int N)
+__global__ void init_CCL(int L[], int R[], int width, int height)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int id = x + y * blockDim.x * gridDim.x;
-	if (id >= N) return;
+	if(x >= width || y >= height)
+		return;
+
+	int id = x + y * width;
 
 	L[id] = R[id] = id;
 }
@@ -37,29 +39,35 @@ __device__ int diff(int d1, int d2)
 	return abs(((d1 >> 16) & 0xff) - ((d2 >> 16) & 0xff)) + abs(((d1 >> 8) & 0xff) - ((d2 >> 8) & 0xff)) + abs((d1 & 0xff) - (d2 & 0xff));
 }
 
-__global__ void scanning(int D[], int L[], int R[], bool* m, int N, int W, int th)
+__global__ void scanning(int D[], int L[], int R[], bool* m, int N, int width, int height, int th)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	int id = x + y * blockDim.x * gridDim.x;
-	if (id >= N) return;
+	if (id >= N)
+		return;
 
 	int Did = D[id];
 	int label = N;
-	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = IMin(label, L[id - W]);
-	if (id + W < N  && diff(Did, D[id + W]) <= th) label = IMin(label, L[id + W]);
-	int r = id % W;
-	if (r           && diff(Did, D[id - 1]) <= th) label = IMin(label, L[id - 1]);
-	if (r + 1 != W  && diff(Did, D[id + 1]) <= th) label = IMin(label, L[id + 1]);
+	if (id - width >= 0 && diff(Did, D[id - width]) <= th)
+		label = IMin(label, L[id - width]);
+	if (id + width < N  && diff(Did, D[id + width]) <= th)
+		label = IMin(label, L[id + width]);
+	int r = id % width;
+	if (r           && diff(Did, D[id - 1]) <= th)
+		label = IMin(label, L[id - 1]);
+	if (r + 1 != width  && diff(Did, D[id + 1]) <= th)
+		label = IMin(label, L[id + 1]);
 
-	if (label < L[id]) {
+	if (label < L[id])
+	{
 		R[L[id]] = label;
 		*m = true;
 	}
 }
 
-__global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int th)
+__global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int width, int height, int th)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -70,18 +78,19 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int 
 
 	int Did = D[id];
 	int label = N;
-	if (id - W >= 0 && diff(Did, D[id - W]) <= th) label = IMin(label, L[id - W]);
-	if (id + W < N  && diff(Did, D[id + W]) <= th) label = IMin(label, L[id + W]);
-	int r = id % W;
-	if (r) {
+	if (id - width >= 0 && diff(Did, D[id - width]) <= th) label = IMin(label, L[id - width]);
+	if (id + width < N  && diff(Did, D[id + width]) <= th) label = IMin(label, L[id + width]);
+	int r = id % width;
+	if (r)
+	{
 		if (diff(Did, D[id - 1]) <= th) label = IMin(label, L[id - 1]);
-		if (id - W - 1 >= 0 && diff(Did, D[id - W - 1]) <= th) label = IMin(label, L[id - W - 1]);
-		if (id + W - 1 < N  && diff(Did, D[id + W - 1]) <= th) label = IMin(label, L[id + W - 1]);
+		if (id - width - 1 >= 0 && diff(Did, D[id - width - 1]) <= th) label = IMin(label, L[id - width - 1]);
+		if (id + width - 1 < N  && diff(Did, D[id + width - 1]) <= th) label = IMin(label, L[id + width - 1]);
 	}
-	if (r + 1 != W) {
+	if (r + 1 != width) {
 		if (diff(Did, D[id + 1]) <= th) label = IMin(label, L[id + 1]);
-		if (id - W + 1 >= 0 && diff(Did, D[id - W + 1]) <= th) label = IMin(label, L[id - W + 1]);
-		if (id + W + 1 < N  && diff(Did, D[id + W + 1]) <= th) label = IMin(label, L[id + W + 1]);
+		if (id - width + 1 >= 0 && diff(Did, D[id - width + 1]) <= th) label = IMin(label, L[id - width + 1]);
+		if (id + width + 1 < N  && diff(Did, D[id + width + 1]) <= th) label = IMin(label, L[id + width + 1]);
 	}
 
 	if (label < L[id])
@@ -91,14 +100,15 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int W, int 
 	}
 }
 
-__global__ void analysis(int D[], int L[], int R[], int N)
+__global__ void analysis(int D[], int L[], int R[], int width, int height, int N)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int id = x + y * blockDim.x * gridDim.x;
+	if (x >= width || y >= height)
+		return;
 
-	if (id >= N) return;
+	int id = x + y * width;
 
 	int label = L[id];
 	int ref;
@@ -106,20 +116,23 @@ __global__ void analysis(int D[], int L[], int R[], int N)
 	{
 		do
 		{
-			label = R[ref = label];
+			ref = label;
+			label = R[ref];
 		}
 		while (ref ^ label);
 		R[id] = label;
 	}
 }
 
-__global__ void labeling(int D[], int L[], int R[], int N)
+__global__ void labeling(int D[], int L[], int R[], int width, int height, int N)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int id = x + y * blockDim.x * gridDim.x;
-	if (id >= N) return;
+	if (x >= width || y >= height)
+		return;
+
+	int id = x + y * width;
 
 	L[id] = R[R[L[id]]];
 }
@@ -156,7 +169,7 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 	dim3 grid((width + BLOCK - 1)/ BLOCK, (height + BLOCK -1)/BLOCK);
 	dim3 threads(BLOCK,BLOCK);
 
-	init_CCL<<<grid, threads>>>(Ld, Rd,width,height, N);
+	init_CCL<<<grid, threads>>>(Ld, Rd,width,height);
 
 	int* t = (int*)malloc(sizeof(int) * width * height);
 
@@ -174,17 +187,17 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 		cudaMemcpy(md, &m, sizeof(bool), cudaMemcpyHostToDevice);
 
 		if (degree_of_connectivity == 4)
-			scanning<<<grid, threads>>>(Dd, Ld, Rd, md, N, width, threshold);
+			scanning<<<grid, threads>>>(Dd, Ld, Rd, md, N, width, height, threshold);
 		else
-			scanning8<<<grid, threads >>>(Dd, Ld, Rd, md, N, width, threshold);
+			scanning8<<<grid, threads >>>(Dd, Ld, Rd, md, N, width, height, threshold);
 
 		cudaMemcpy(&m, md, sizeof(bool), cudaMemcpyDeviceToHost);
 
 		if (m)
 		{
-			analysis<<<grid, threads>>>(Dd, Ld, Rd, N);
+			analysis<<<grid, threads>>>(Dd, Ld, Rd, width, height, N);
 			//cudaThreadSynchronize();
-			labeling<<<grid, threads>>>(Dd, Ld, Rd, N);
+			labeling<<<grid, threads>>>(Dd, Ld, Rd, width, height, N);
 		}
 		else
 		{
