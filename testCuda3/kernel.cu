@@ -1,12 +1,12 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
-#include <cstdlib>
 #include <ctime>
 #include <ostream>
 #include <iostream>
 #include <iomanip>
 #include <Windows.h>
+#include <fstream>
 
 #define CheckPerf(call, message)                                                                             \
 {                                                                                                            \
@@ -27,7 +27,7 @@ inline double get_time()
 	return static_cast<double>(clock()) / CLOCKS_PER_SEC;
 }
 
-__device__ unsigned char IMin(unsigned char a, unsigned char b)
+__device__ int IMin(int a, int b)
 {
 	return a < b ? a : b;
 }
@@ -220,10 +220,14 @@ void CCL::CudaCCL(unsigned char* frame, int* labels, int width, int height, int 
 		cudaMemcpy(markFlagOnDevice, &markFalgOnHost, sizeof(bool), cudaMemcpyHostToDevice);
 
 		if (degreeOfConnectivity == 4)
+		{
 			Scanning<<<grid, threads>>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, markFlagOnDevice, N, width, height, threshold);
+			cudaThreadSynchronize();
+		}
 		else
 			scanning8<<<grid, threads >>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, markFlagOnDevice, N, width, height, threshold);
 
+		cudaThreadSynchronize();
 		cudaMemcpy(&markFalgOnHost, markFlagOnDevice, sizeof(bool), cudaMemcpyDeviceToHost);
 
 		if (markFalgOnHost)
@@ -247,20 +251,69 @@ void CCL::CudaCCL(unsigned char* frame, int* labels, int width, int height, int 
 
 int main()
 {
-	const auto width = 8;
-	const auto height = 8;
+//	const auto width = 9;
+//	const auto height = 8;
 
-	unsigned char data[width * height] =
+//	unsigned char data[width * height] =
+//	{
+//		2,1, 1, 1, 1, 1, 1, 0, 0,
+//		2,0, 0, 0, 1, 1, 1, 1, 0,
+//		2,0, 0, 0, 1, 1, 1, 1, 0,
+//		2,0, 0, 0, 0, 1, 1, 1, 1,
+//		2,0, 0, 0, 0, 0, 1, 1, 1,
+//		2,0, 0, 0, 1, 1, 1, 1, 1,
+//		2,0, 1, 1, 1, 1, 0, 0, 0,
+//		2,0, 1, 0, 0, 0, 0, 0, 0
+//	};
+
+//	const auto width = 12;
+//	const auto height = 8;
+//	unsigned char data[width * height] =
+//	{
+//		135, 135, 240, 240, 240, 135, 135, 135, 135, 135, 135, 135,
+//		135, 135, 240, 240, 240, 135, 135, 135, 135, 135, 135, 135,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120
+//	};
+
+//	const auto width = 32;
+//	const auto height = 8;
+//	unsigned char data[width * height] =
+//	{
+//		135, 135, 240, 240, 240, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 135, 135, 135, 135, 135, 120, 120,
+//		135, 135, 240, 240, 240, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 135, 135, 135, 135, 135, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 135, 135, 135, 135, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 135, 135, 135, 120, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120,
+//		135, 135, 135, 135, 135, 135, 135, 135, 135, 135, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120
+//	};
+
+	const auto width = 320;
+	const auto height = 256;
+	unsigned char data[width * height] = {0};
+
+	ifstream fin;
+	fin.open("dataOriginal.txt", ios::in);
+	if (fin.is_open())
 	{
-		1, 1, 1, 1, 1, 1, 0, 0,
-		0, 0, 0, 1, 1, 1, 1, 0,
-		0, 0, 0, 1, 1, 1, 1, 0,
-		0, 0, 0, 0, 1, 1, 1, 1,
-		0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 1, 1, 1, 1, 1,
-		0, 1, 1, 1, 1, 0, 0, 0,
-		0, 1, 0, 0, 0, 0, 0, 0
-	};
+		int txt;
+		for (auto i = 0; i < width * height; ++i)
+		{
+			fin >> txt;
+			data[i] = static_cast<unsigned char>(txt);
+		}
+		fin.close();
+	}
+	else
+	{
+		cout << "Read Data file fialed" << endl;
+	}
 
 	int labels[width * height] = { 0 };
 
@@ -290,6 +343,24 @@ int main()
 			cout << setw(3) << labels[i * width + j] << " ";
 		}
 		cout << endl;
+	}
+
+	ofstream fout;
+	fout.open("dataOriginalResult.txt", ios::out);
+	if (fout.is_open())
+	{
+		int txt;
+		for (auto i = 0; i < width * height; ++i)
+		{
+			fout << labels[i] << " ";
+			if ((i + 1) % width == 0)
+				fout << endl;
+		}
+		fin.close();
+	}
+	else
+	{
+		cout << "Write result file fialed" << endl;
 	}
 
 	system("Pause");
