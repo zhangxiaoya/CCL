@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <ctime>
-#include <vector>
 #include <ostream>
 #include <iostream>
 #include <iomanip>
@@ -164,7 +163,7 @@ public:
 	{
 	}
 
-	void cuda_ccl(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold);
+	void CudaCCL(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold);
 
 private:
 	unsigned char* FrameDataOnDevice;
@@ -172,7 +171,7 @@ private:
 	int* ReferenceOnDevice;
 };
 
-void CCL::cuda_ccl(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold)
+void CCL::CudaCCL(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold)
 {
 	auto N = width * height;
 
@@ -271,7 +270,7 @@ int main()
 	CCL ccl;
 
 	auto start = get_time();
-	ccl.cuda_ccl(data, labels, width, height, degreeOfConnectivity, threshold);
+	ccl.CudaCCL(data, labels, width, height, degreeOfConnectivity, threshold);
 	auto end = get_time();
 
 	cerr << "Time: " << end - start << endl;
