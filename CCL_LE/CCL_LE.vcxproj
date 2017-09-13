@@ -21,6 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3395461B-A187-45FB-B4B2-80DC094C4D70}</ProjectGuid>
     <RootNamespace>testCuda3</RootNamespace>
+    <ProjectName>CCL_LE</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
