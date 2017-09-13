@@ -164,7 +164,7 @@ public:
 	{
 	}
 
-	vector<int> cuda_ccl(vector<unsigned char>& image, int width, int height, int degreeOfConnectivity, unsigned char threshold);
+	void cuda_ccl(vector<unsigned char>& image, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold);
 
 private:
 	unsigned char* FrameDataOnDevice;
@@ -172,13 +172,8 @@ private:
 	int* ReferenceOnDevice;
 };
 
-vector<int> CCL::cuda_ccl(vector<unsigned char>& image, int width, int height, int degreeOfConnectivity, unsigned char threshold)
+void CCL::cuda_ccl(vector<unsigned char>& image, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold)
 {
-
-	vector<int> result;
-	vector<int> tempResult;
-	tempResult.resize(image.size());
-	int* temp = static_cast<int*>(&tempResult[0]);
 	unsigned char* D = static_cast<unsigned char*>(&image[0]);
 	int N = image.size();
 
@@ -223,7 +218,7 @@ vector<int> CCL::cuda_ccl(vector<unsigned char>& image, int width, int height, i
 		if (m)
 		{
 			analysis<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice, width, height);
-			//cudaThreadSynchronize();
+			cudaThreadSynchronize();
 			labeling<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice, width, height);
 		}
 		else
@@ -233,14 +228,11 @@ vector<int> CCL::cuda_ccl(vector<unsigned char>& image, int width, int height, i
 	}
 
 
-	cudaMemcpy(temp, LabelListOnDevice, sizeof(int) * N, cudaMemcpyDeviceToHost);
+	cudaMemcpy(labels, LabelListOnDevice, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
 	cudaFree(FrameDataOnDevice);
 	cudaFree(LabelListOnDevice);
 	cudaFree(ReferenceOnDevice);
-
-	result.swap(tempResult);
-	return result;
 }
 
 int main()
@@ -260,14 +252,17 @@ int main()
 		0,0,0, 1, 0, 0, 0, 0, 0, 0
 	};
 
+	int labels[width * height] = { 0 };
+
 	vector<unsigned char> image(data, data + width * height);
 
-	cout << "binary image" <<endl;
+	cout << "Binary image is : " <<endl;
 	for (auto i = 0; i < image.size() / width; i++)
 	{
 		for (auto j = 0; j < width; j++)
+		{
 			cout << static_cast<int>(image[i * width + j]) << " ";
-
+		}
 		cout << endl;
 	}
 	cout<<endl;
@@ -278,19 +273,18 @@ int main()
 	CCL ccl;
 
 	auto start = get_time();
-	auto result = ccl.cuda_ccl(image, width, height, degreeOfConnectivity, threshold);
+	ccl.cuda_ccl(image, labels, width, height, degreeOfConnectivity, threshold);
 	auto end = get_time();
 
 	cerr << "Time: " << end - start << endl;
 
-	cout << result.size() << endl;
-	cout << width << endl;
-
-	for (auto i = 0; i < result.size() / width; i++)
+	cout << "Label Mesh : " <<endl;
+	for (auto i = 0; i < height; i++)
 	{
 		for (auto j = 0; j < width; j++)
-			cout << setw(3)<< result[i * width + j] << " ";
-
+		{
+			cout << setw(3) << labels[i * width + j] << " ";
+		}
 		cout << endl;
 	}
 
