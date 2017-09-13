@@ -164,7 +164,7 @@ public:
 	{
 	}
 
-	void cuda_ccl(vector<unsigned char>& image, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold);
+	void cuda_ccl(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold);
 
 private:
 	unsigned char* FrameDataOnDevice;
@@ -172,50 +172,51 @@ private:
 	int* ReferenceOnDevice;
 };
 
-void CCL::cuda_ccl(vector<unsigned char>& image, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold)
+void CCL::cuda_ccl(unsigned char* frame, int* labels, int width, int height, int degreeOfConnectivity, unsigned char threshold)
 {
-	unsigned char* D = static_cast<unsigned char*>(&image[0]);
-	int N = image.size();
+	auto N = width * height;
 
-	cudaMalloc((void**)&LabelListOnDevice, sizeof(int) * N);
-	cudaMalloc((void**)&ReferenceOnDevice, sizeof(int) * N);
-	cudaMalloc((void**)&FrameDataOnDevice, sizeof(unsigned char) * N);
+	cudaMalloc(reinterpret_cast<void**>(&LabelListOnDevice), sizeof(int) * N);
+	cudaMalloc(reinterpret_cast<void**>(&ReferenceOnDevice), sizeof(int) * N);
+	cudaMalloc(reinterpret_cast<void**>(&FrameDataOnDevice), sizeof(unsigned char) * N);
 
-	cudaMemcpy(FrameDataOnDevice, D, sizeof(unsigned char) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy(FrameDataOnDevice, frame, sizeof(unsigned char) * N, cudaMemcpyHostToDevice);
 
-	bool* md;
-	cudaMalloc((void**)&md, sizeof(bool));
-
-	int gridWidth = static_cast<int>(sqrt(static_cast<double>(N) / BLOCK)) + 1;
+	bool* markFlagOnDevice;
+	cudaMalloc(reinterpret_cast<void**>(&markFlagOnDevice), sizeof(bool));
 
 	dim3 grid((width + BLOCK - 1)/ BLOCK, (height + BLOCK -1)/BLOCK);
 	dim3 threads(BLOCK,BLOCK);
 
 	InitCCL<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice,width,height);
 
-	int* t = (int*)malloc(sizeof(int) * width * height);
+	auto initLabel = static_cast<int*>(malloc(sizeof(int) * width * height));
 
-	cudaMemcpy(t, LabelListOnDevice, sizeof(int)*width*height, cudaMemcpyDeviceToHost);
-	for(auto i = 0;i<width * height;++i)
+	cudaMemcpy(initLabel, LabelListOnDevice, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
+	for (auto i = 0; i < height; ++i)
 	{
-		cout << t[i] << " ";
-		if ((i+1) % width == 0)
-			cout << endl;
+		for (auto j = 0; j < width; ++j)
+		{
+			cout << initLabel[i * width + j] << " ";
+		}
+		cout << endl;
 	}
+	cout << endl;
+	free(initLabel);
 
 	while (true)
 	{
-		bool m = false;
-		cudaMemcpy(md, &m, sizeof(bool), cudaMemcpyHostToDevice);
+		auto markFalgOnHost = false;
+		cudaMemcpy(markFlagOnDevice, &markFalgOnHost, sizeof(bool), cudaMemcpyHostToDevice);
 
 		if (degreeOfConnectivity == 4)
-			Scanning<<<grid, threads>>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, md, N, width, height, threshold);
+			Scanning<<<grid, threads>>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, markFlagOnDevice, N, width, height, threshold);
 		else
-			scanning8<<<grid, threads >>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, md, N, width, height, threshold);
+			scanning8<<<grid, threads >>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, markFlagOnDevice, N, width, height, threshold);
 
-		cudaMemcpy(&m, md, sizeof(bool), cudaMemcpyDeviceToHost);
+		cudaMemcpy(&markFalgOnHost, markFlagOnDevice, sizeof(bool), cudaMemcpyDeviceToHost);
 
-		if (m)
+		if (markFalgOnHost)
 		{
 			analysis<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice, width, height);
 			cudaThreadSynchronize();
@@ -226,7 +227,6 @@ void CCL::cuda_ccl(vector<unsigned char>& image, int* labels, int width, int hei
 			break;
 		}
 	}
-
 
 	cudaMemcpy(labels, LabelListOnDevice, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
@@ -254,14 +254,12 @@ int main()
 
 	int labels[width * height] = { 0 };
 
-	vector<unsigned char> image(data, data + width * height);
-
 	cout << "Binary image is : " <<endl;
-	for (auto i = 0; i < image.size() / width; i++)
+	for (auto i = 0; i < height; i++)
 	{
 		for (auto j = 0; j < width; j++)
 		{
-			cout << static_cast<int>(image[i * width + j]) << " ";
+			cout << static_cast<int>(data[i * width + j]) << " ";
 		}
 		cout << endl;
 	}
@@ -273,7 +271,7 @@ int main()
 	CCL ccl;
 
 	auto start = get_time();
-	ccl.cuda_ccl(image, labels, width, height, degreeOfConnectivity, threshold);
+	ccl.cuda_ccl(data, labels, width, height, degreeOfConnectivity, threshold);
 	auto end = get_time();
 
 	cerr << "Time: " << end - start << endl;
