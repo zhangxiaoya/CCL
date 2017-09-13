@@ -6,6 +6,7 @@
 #include <vector>
 #include <ostream>
 #include <iostream>
+#include <iomanip>
 
 const int BLOCK = 8;
 
@@ -16,7 +17,7 @@ inline double get_time()
 	return static_cast<double>(std::clock()) / CLOCKS_PER_SEC;
 }
 
-__device__ int IMin(int a, int b)
+__device__ unsigned char IMin(unsigned char a, unsigned char b)
 {
 	return a < b ? a : b;
 }
@@ -34,12 +35,12 @@ __global__ void init_CCL(int L[], int R[], int width, int height)
 	L[id] = R[id] = id;
 }
 
-__device__ int diff(int d1, int d2)
+__device__ unsigned char diff(unsigned char d1, unsigned char d2)
 {
-	return abs(((d1 >> 16) & 0xff) - ((d2 >> 16) & 0xff)) + abs(((d1 >> 8) & 0xff) - ((d2 >> 8) & 0xff)) + abs((d1 & 0xff) - (d2 & 0xff));
+	return abs(d1 - d2);
 }
 
-__global__ void scanning(int D[], int L[], int R[], bool* m, int N, int width, int height, int th)
+__global__ void scanning(unsigned char D[], int L[], int R[], bool* m, int N, int width, int height, unsigned char th)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -48,8 +49,9 @@ __global__ void scanning(int D[], int L[], int R[], bool* m, int N, int width, i
 	if (id >= N)
 		return;
 
-	int Did = D[id];
+	unsigned char Did = D[id];
 	int label = N;
+
 	if (id - width >= 0 && diff(Did, D[id - width]) <= th)
 		label = IMin(label, L[id - width]);
 	if (id + width < N  && diff(Did, D[id + width]) <= th)
@@ -67,7 +69,7 @@ __global__ void scanning(int D[], int L[], int R[], bool* m, int N, int width, i
 	}
 }
 
-__global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int width, int height, int th)
+__global__ void scanning8(unsigned char D[], int L[], int R[], bool* m, int N, int width, int height, unsigned char th)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -76,21 +78,33 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int width, 
 
 	if (id >= N) return;
 
-	int Did = D[id];
+	unsigned char Did = D[id];
 	int label = N;
-	if (id - width >= 0 && diff(Did, D[id - width]) <= th) label = IMin(label, L[id - width]);
-	if (id + width < N  && diff(Did, D[id + width]) <= th) label = IMin(label, L[id + width]);
+
+	if (id - width >= 0 && diff(Did, D[id - width]) <= th)
+		label = IMin(label, L[id - width]);
+
+	if (id + width < N  && diff(Did, D[id + width]) <= th)
+		label = IMin(label, L[id + width]);
+
 	int r = id % width;
 	if (r)
 	{
-		if (diff(Did, D[id - 1]) <= th) label = IMin(label, L[id - 1]);
-		if (id - width - 1 >= 0 && diff(Did, D[id - width - 1]) <= th) label = IMin(label, L[id - width - 1]);
-		if (id + width - 1 < N  && diff(Did, D[id + width - 1]) <= th) label = IMin(label, L[id + width - 1]);
+		if (diff(Did, D[id - 1]) <= th)
+			label = IMin(label, L[id - 1]);
+		if (id - width - 1 >= 0 && diff(Did, D[id - width - 1]) <= th)
+			label = IMin(label, L[id - width - 1]);
+		if (id + width - 1 < N  && diff(Did, D[id + width - 1]) <= th)
+			label = IMin(label, L[id + width - 1]);
 	}
-	if (r + 1 != width) {
-		if (diff(Did, D[id + 1]) <= th) label = IMin(label, L[id + 1]);
-		if (id - width + 1 >= 0 && diff(Did, D[id - width + 1]) <= th) label = IMin(label, L[id - width + 1]);
-		if (id + width + 1 < N  && diff(Did, D[id + width + 1]) <= th) label = IMin(label, L[id + width + 1]);
+	if (r + 1 != width)
+	{
+		if (diff(Did, D[id + 1]) <= th)
+			label = IMin(label, L[id + 1]);
+		if (id - width + 1 >= 0 && diff(Did, D[id - width + 1]) <= th)
+			label = IMin(label, L[id - width + 1]);
+		if (id + width + 1 < N  && diff(Did, D[id + width + 1]) <= th)
+			label = IMin(label, L[id + width + 1]);
 	}
 
 	if (label < L[id])
@@ -100,7 +114,7 @@ __global__ void scanning8(int D[], int L[], int R[], bool* m, int N, int width, 
 	}
 }
 
-__global__ void analysis(int D[], int L[], int R[], int width, int height, int N)
+__global__ void analysis(unsigned char D[], int L[], int R[], int width, int height, int N)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -124,7 +138,7 @@ __global__ void analysis(int D[], int L[], int R[], int width, int height, int N
 	}
 }
 
-__global__ void labeling(int D[], int L[], int R[], int width, int height, int N)
+__global__ void labeling(unsigned char D[], int L[], int R[], int width, int height, int N)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -140,26 +154,29 @@ __global__ void labeling(int D[], int L[], int R[], int width, int height, int N
 class CCL
 {
 public:
-	std::vector<int> cuda_ccl(std::vector<int>& image, int W, int height, int degree_of_connectivity, int threshold);
+	std::vector<int> cuda_ccl(std::vector<unsigned char>& image, int width, int height, int degree_of_connectivity, unsigned char threshold);
 
 private:
-	int* Dd;
+	unsigned char* Dd;
 	int* Ld;
 	int* Rd;
 };
 
-vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int degree_of_connectivity, int threshold)
+vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int height, int degree_of_connectivity, unsigned char threshold)
 {
 
 	vector<int> result;
-	int* D = static_cast<int*>(&image[0]);
+	vector<int> tempResult;
+	tempResult.resize(image.size());
+	int* temp = static_cast<int*>(&tempResult[0]);
+	unsigned char* D = static_cast<unsigned char*>(&image[0]);
 	int N = image.size();
 
 	cudaMalloc((void**)&Ld, sizeof(int) * N);
 	cudaMalloc((void**)&Rd, sizeof(int) * N);
-	cudaMalloc((void**)&Dd, sizeof(int) * N);
+	cudaMalloc((void**)&Dd, sizeof(unsigned char) * N);
 
-	cudaMemcpy(Dd, D, sizeof(int) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy(Dd, D, sizeof(unsigned char) * N, cudaMemcpyHostToDevice);
 
 	bool* md;
 	cudaMalloc((void**)&md, sizeof(bool));
@@ -206,13 +223,13 @@ vector<int> CCL::cuda_ccl(std::vector<int>& image, int width, int height, int de
 	}
 
 
-	cudaMemcpy(D, Ld, sizeof(int) * N, cudaMemcpyDeviceToHost);
+	cudaMemcpy(temp, Ld, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
 	cudaFree(Dd);
 	cudaFree(Ld);
 	cudaFree(Rd);
 
-	result.swap(image);
+	result.swap(tempResult);
 	return result;
 }
 
@@ -221,7 +238,7 @@ int main()
 	const int width = 10;
 	const int height = 8;
 
-	int data[width * height] =
+	unsigned char data[width * height] =
 	{
 		1,1,1, 1, 1, 1, 1, 1, 0, 0,
 		0,0,0, 0, 0, 1, 1, 1, 1, 0,
@@ -233,20 +250,20 @@ int main()
 		0,0,0, 1, 0, 0, 0, 0, 0, 0
 	};
 
-	vector<int> image(data, data + width * height);
+	vector<unsigned char> image(data, data + width * height);
 
 	cout << "binary image" <<endl;
-	for (auto i = 0; i < static_cast<int>(image.size()) / width; i++)
+	for (auto i = 0; i < image.size() / width; i++)
 	{
 		for (auto j = 0; j < width; j++)
-			cout << image[i * width + j] << " ";
+			cout << (int)image[i * width + j] << " ";
 
 		cout << endl;
 	}
 	cout<<endl;
 
 	auto degree_of_connectivity = 4;
-	auto threshold = 0;
+	unsigned char threshold = 0;
 
 	CCL ccl;
 
@@ -259,10 +276,10 @@ int main()
 	cout << result.size() << endl;
 	cout << width << endl;
 
-	for (auto i = 0; i < static_cast<int>(result.size()) / width; i++)
+	for (auto i = 0; i < result.size() / width; i++)
 	{
 		for (auto j = 0; j < width; j++)
-			cout << result[i * width + j] << " ";
+			cout << setw(3)<< result[i * width + j] << " ";
 
 		cout << endl;
 	}
