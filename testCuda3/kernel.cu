@@ -6,6 +6,17 @@
 #include <ostream>
 #include <iostream>
 #include <iomanip>
+#include <Windows.h>
+
+#define CheckPerf(call, message)                                                                             \
+{                                                                                                            \
+	LARGE_INTEGER t1, t2, tc;                                                                                \
+	QueryPerformanceFrequency(&tc);                                                                          \
+	QueryPerformanceCounter(&t1);                                                                            \
+	call;                                                                                                    \
+	QueryPerformanceCounter(&t2);                                                                            \
+	printf("Operation of %20s Use Time:%f\n", message, (t2.QuadPart - t1.QuadPart)*1.0 / tc.QuadPart);       \
+};
 
 const int BLOCK = 8;
 
@@ -269,11 +280,7 @@ int main()
 
 	CCL ccl;
 
-	auto start = get_time();
-	ccl.CudaCCL(data, labels, width, height, degreeOfConnectivity, threshold);
-	auto end = get_time();
-
-	cerr << "Time: " << end - start << endl;
+	CheckPerf(ccl.CudaCCL(data, labels, width, height, degreeOfConnectivity, threshold),"CCL LE");
 
 	cout << "Label Mesh : " <<endl;
 	for (auto i = 0; i < height; i++)
