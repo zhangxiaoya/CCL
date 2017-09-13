@@ -247,19 +247,19 @@ void CCL::CudaCCL(unsigned char* frame, int* labels, int width, int height, int 
 
 int main()
 {
-	const auto width = 10;
+	const auto width = 8;
 	const auto height = 8;
 
 	unsigned char data[width * height] =
 	{
-		1,1,1, 1, 1, 1, 1, 1, 0, 0,
-		0,0,0, 0, 0, 1, 1, 1, 1, 0,
-		0,0,0, 0, 0, 1, 1, 1, 1, 0,
-		0,0,0, 0, 0, 0, 1, 1, 1, 1,
-		0,0,0, 0, 0, 0, 0, 1, 1, 1,
-		0,0,0, 0, 0, 1, 1, 1, 1, 1,
-		0,0,0, 1, 1, 1, 1, 0, 0, 0,
-		0,0,0, 1, 0, 0, 0, 0, 0, 0
+		1, 1, 1, 1, 1, 1, 0, 0,
+		0, 0, 0, 1, 1, 1, 1, 0,
+		0, 0, 0, 1, 1, 1, 1, 0,
+		0, 0, 0, 0, 1, 1, 1, 1,
+		0, 0, 0, 0, 0, 1, 1, 1,
+		0, 0, 0, 1, 1, 1, 1, 1,
+		0, 1, 1, 1, 1, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0
 	};
 
 	int labels[width * height] = { 0 };
