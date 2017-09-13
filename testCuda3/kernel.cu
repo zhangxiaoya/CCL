@@ -14,7 +14,7 @@ using namespace std;
 
 inline double get_time()
 {
-	return static_cast<double>(std::clock()) / CLOCKS_PER_SEC;
+	return static_cast<double>(clock()) / CLOCKS_PER_SEC;
 }
 
 __device__ unsigned char IMin(unsigned char a, unsigned char b)
@@ -22,7 +22,12 @@ __device__ unsigned char IMin(unsigned char a, unsigned char b)
 	return a < b ? a : b;
 }
 
-__global__ void init_CCL(int L[], int R[], int width, int height)
+__device__ unsigned char diff(unsigned char a, unsigned char b)
+{
+	return abs(a - b);
+}
+
+__global__ void InitCCL(int labelList[], int reference[], int width, int height)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -32,44 +37,42 @@ __global__ void init_CCL(int L[], int R[], int width, int height)
 
 	int id = x + y * width;
 
-	L[id] = R[id] = id;
+	labelList[id] = reference[id] = id;
 }
 
-__device__ unsigned char diff(unsigned char d1, unsigned char d2)
-{
-	return abs(d1 - d2);
-}
-
-__global__ void scanning(unsigned char D[], int L[], int R[], bool* m, int N, int width, int height, unsigned char th)
+__global__ void Scanning(unsigned char frame[], int labelList[], int reference[], bool* markFlag, int N, int width, int height, unsigned char threshold)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int id = x + y * blockDim.x * gridDim.x;
-	if (id >= N)
+	if (x >= width || y >= height)
 		return;
 
-	unsigned char Did = D[id];
+	int id = x + y * width;
+
+	unsigned char value = frame[id];
 	int label = N;
 
-	if (id - width >= 0 && diff(Did, D[id - width]) <= th)
-		label = IMin(label, L[id - width]);
-	if (id + width < N  && diff(Did, D[id + width]) <= th)
-		label = IMin(label, L[id + width]);
-	int r = id % width;
-	if (r           && diff(Did, D[id - 1]) <= th)
-		label = IMin(label, L[id - 1]);
-	if (r + 1 != width  && diff(Did, D[id + 1]) <= th)
-		label = IMin(label, L[id + 1]);
+	if (id - width >= 0 && diff(value, frame[id - width]) <= threshold)
+		label = IMin(label, labelList[id - width]);
+	if (id + width < N  && diff(value, frame[id + width]) <= threshold)
+		label = IMin(label, labelList[id + width]);
 
-	if (label < L[id])
+	int col = id % width;
+
+	if (col > 0           && diff(value, frame[id - 1]) <= threshold)
+		label = IMin(label, labelList[id - 1]);
+	if (col + 1 < width  && diff(value, frame[id + 1]) <= threshold)
+		label = IMin(label, labelList[id + 1]);
+
+	if (label < labelList[id])
 	{
-		R[L[id]] = label;
-		*m = true;
+		reference[labelList[id]] = label;
+		*markFlag = true;
 	}
 }
 
-__global__ void scanning8(unsigned char D[], int L[], int R[], bool* m, int N, int width, int height, unsigned char th)
+__global__ void scanning8(unsigned char frame[], int labelList[], int reference[], bool* markFlag, int N, int width, int height, unsigned char threshold)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -78,43 +81,43 @@ __global__ void scanning8(unsigned char D[], int L[], int R[], bool* m, int N, i
 
 	if (id >= N) return;
 
-	unsigned char Did = D[id];
+	unsigned char value = frame[id];
 	int label = N;
 
-	if (id - width >= 0 && diff(Did, D[id - width]) <= th)
-		label = IMin(label, L[id - width]);
+	if (id - width >= 0 && diff(value, frame[id - width]) <= threshold)
+		label = IMin(label, labelList[id - width]);
 
-	if (id + width < N  && diff(Did, D[id + width]) <= th)
-		label = IMin(label, L[id + width]);
+	if (id + width < N  && diff(value, frame[id + width]) <= threshold)
+		label = IMin(label, labelList[id + width]);
 
-	int r = id % width;
-	if (r)
+	int col = id % width;
+	if (col > 0)
 	{
-		if (diff(Did, D[id - 1]) <= th)
-			label = IMin(label, L[id - 1]);
-		if (id - width - 1 >= 0 && diff(Did, D[id - width - 1]) <= th)
-			label = IMin(label, L[id - width - 1]);
-		if (id + width - 1 < N  && diff(Did, D[id + width - 1]) <= th)
-			label = IMin(label, L[id + width - 1]);
+		if (diff(value, frame[id - 1]) <= threshold)
+			label = IMin(label, labelList[id - 1]);
+		if (id - width - 1 >= 0 && diff(value, frame[id - width - 1]) <= threshold)
+			label = IMin(label, labelList[id - width - 1]);
+		if (id + width - 1 < N  && diff(value, frame[id + width - 1]) <= threshold)
+			label = IMin(label, labelList[id + width - 1]);
 	}
-	if (r + 1 != width)
+	if (col + 1 < width)
 	{
-		if (diff(Did, D[id + 1]) <= th)
-			label = IMin(label, L[id + 1]);
-		if (id - width + 1 >= 0 && diff(Did, D[id - width + 1]) <= th)
-			label = IMin(label, L[id - width + 1]);
-		if (id + width + 1 < N  && diff(Did, D[id + width + 1]) <= th)
-			label = IMin(label, L[id + width + 1]);
+		if (diff(value, frame[id + 1]) <= threshold)
+			label = IMin(label, labelList[id + 1]);
+		if (id - width + 1 >= 0 && diff(value, frame[id - width + 1]) <= threshold)
+			label = IMin(label, labelList[id - width + 1]);
+		if (id + width + 1 < N  && diff(value, frame[id + width + 1]) <= threshold)
+			label = IMin(label, labelList[id + width + 1]);
 	}
 
-	if (label < L[id])
+	if (label < labelList[id])
 	{
-		R[L[id]] = label;
-		*m = true;
+		reference[labelList[id]] = label;
+		*markFlag = true;
 	}
 }
 
-__global__ void analysis(unsigned char D[], int L[], int R[], int width, int height, int N)
+__global__ void analysis(int labelList[], int reference[], int width, int height)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -124,21 +127,21 @@ __global__ void analysis(unsigned char D[], int L[], int R[], int width, int hei
 
 	int id = x + y * width;
 
-	int label = L[id];
+	int label = labelList[id];
 	int ref;
 	if (label == id)
 	{
 		do
 		{
 			ref = label;
-			label = R[ref];
+			label = reference[ref];
 		}
 		while (ref ^ label);
-		R[id] = label;
+		reference[id] = label;
 	}
 }
 
-__global__ void labeling(unsigned char D[], int L[], int R[], int width, int height, int N)
+__global__ void labeling(int labelList[], int reference[], int width, int height)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -148,21 +151,28 @@ __global__ void labeling(unsigned char D[], int L[], int R[], int width, int hei
 
 	int id = x + y * width;
 
-	L[id] = R[R[L[id]]];
+	labelList[id] = reference[reference[labelList[id]]];
 }
 
 class CCL
 {
 public:
-	std::vector<int> cuda_ccl(std::vector<unsigned char>& image, int width, int height, int degree_of_connectivity, unsigned char threshold);
+	explicit CCL(unsigned char* dataOnDevice = nullptr, int* labelListOnDevice=nullptr, int* referenceOnDevice= nullptr)
+		: FrameDataOnDevice(dataOnDevice),
+		  LabelListOnDevice(labelListOnDevice),
+		  ReferenceOnDevice(referenceOnDevice)
+	{
+	}
+
+	vector<int> cuda_ccl(vector<unsigned char>& image, int width, int height, int degreeOfConnectivity, unsigned char threshold);
 
 private:
-	unsigned char* Dd;
-	int* Ld;
-	int* Rd;
+	unsigned char* FrameDataOnDevice;
+	int* LabelListOnDevice;
+	int* ReferenceOnDevice;
 };
 
-vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int height, int degree_of_connectivity, unsigned char threshold)
+vector<int> CCL::cuda_ccl(vector<unsigned char>& image, int width, int height, int degreeOfConnectivity, unsigned char threshold)
 {
 
 	vector<int> result;
@@ -172,11 +182,11 @@ vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int heig
 	unsigned char* D = static_cast<unsigned char*>(&image[0]);
 	int N = image.size();
 
-	cudaMalloc((void**)&Ld, sizeof(int) * N);
-	cudaMalloc((void**)&Rd, sizeof(int) * N);
-	cudaMalloc((void**)&Dd, sizeof(unsigned char) * N);
+	cudaMalloc((void**)&LabelListOnDevice, sizeof(int) * N);
+	cudaMalloc((void**)&ReferenceOnDevice, sizeof(int) * N);
+	cudaMalloc((void**)&FrameDataOnDevice, sizeof(unsigned char) * N);
 
-	cudaMemcpy(Dd, D, sizeof(unsigned char) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy(FrameDataOnDevice, D, sizeof(unsigned char) * N, cudaMemcpyHostToDevice);
 
 	bool* md;
 	cudaMalloc((void**)&md, sizeof(bool));
@@ -186,11 +196,11 @@ vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int heig
 	dim3 grid((width + BLOCK - 1)/ BLOCK, (height + BLOCK -1)/BLOCK);
 	dim3 threads(BLOCK,BLOCK);
 
-	init_CCL<<<grid, threads>>>(Ld, Rd,width,height);
+	InitCCL<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice,width,height);
 
 	int* t = (int*)malloc(sizeof(int) * width * height);
 
-	cudaMemcpy(t, Ld, sizeof(int)*width*height, cudaMemcpyDeviceToHost);
+	cudaMemcpy(t, LabelListOnDevice, sizeof(int)*width*height, cudaMemcpyDeviceToHost);
 	for(auto i = 0;i<width * height;++i)
 	{
 		cout << t[i] << " ";
@@ -203,18 +213,18 @@ vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int heig
 		bool m = false;
 		cudaMemcpy(md, &m, sizeof(bool), cudaMemcpyHostToDevice);
 
-		if (degree_of_connectivity == 4)
-			scanning<<<grid, threads>>>(Dd, Ld, Rd, md, N, width, height, threshold);
+		if (degreeOfConnectivity == 4)
+			Scanning<<<grid, threads>>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, md, N, width, height, threshold);
 		else
-			scanning8<<<grid, threads >>>(Dd, Ld, Rd, md, N, width, height, threshold);
+			scanning8<<<grid, threads >>>(FrameDataOnDevice, LabelListOnDevice, ReferenceOnDevice, md, N, width, height, threshold);
 
 		cudaMemcpy(&m, md, sizeof(bool), cudaMemcpyDeviceToHost);
 
 		if (m)
 		{
-			analysis<<<grid, threads>>>(Dd, Ld, Rd, width, height, N);
+			analysis<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice, width, height);
 			//cudaThreadSynchronize();
-			labeling<<<grid, threads>>>(Dd, Ld, Rd, width, height, N);
+			labeling<<<grid, threads>>>(LabelListOnDevice, ReferenceOnDevice, width, height);
 		}
 		else
 		{
@@ -223,11 +233,11 @@ vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int heig
 	}
 
 
-	cudaMemcpy(temp, Ld, sizeof(int) * N, cudaMemcpyDeviceToHost);
+	cudaMemcpy(temp, LabelListOnDevice, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
-	cudaFree(Dd);
-	cudaFree(Ld);
-	cudaFree(Rd);
+	cudaFree(FrameDataOnDevice);
+	cudaFree(LabelListOnDevice);
+	cudaFree(ReferenceOnDevice);
 
 	result.swap(tempResult);
 	return result;
@@ -235,8 +245,8 @@ vector<int> CCL::cuda_ccl(std::vector<unsigned char>& image, int width, int heig
 
 int main()
 {
-	const int width = 10;
-	const int height = 8;
+	const auto width = 10;
+	const auto height = 8;
 
 	unsigned char data[width * height] =
 	{
@@ -256,19 +266,19 @@ int main()
 	for (auto i = 0; i < image.size() / width; i++)
 	{
 		for (auto j = 0; j < width; j++)
-			cout << (int)image[i * width + j] << " ";
+			cout << static_cast<int>(image[i * width + j]) << " ";
 
 		cout << endl;
 	}
 	cout<<endl;
 
-	auto degree_of_connectivity = 4;
+	auto degreeOfConnectivity = 4;
 	unsigned char threshold = 0;
 
 	CCL ccl;
 
 	auto start = get_time();
-	auto result = ccl.cuda_ccl(image, width, height, degree_of_connectivity, threshold);
+	auto result = ccl.cuda_ccl(image, width, height, degreeOfConnectivity, threshold);
 	auto end = get_time();
 
 	cerr << "Time: " << end - start << endl;
