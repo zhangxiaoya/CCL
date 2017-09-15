@@ -8,6 +8,8 @@
 #include <Windows.h>
 #include <fstream>
 
+#include "CCLLE_CPU.hpp"
+
 #define CheckPerf(call, message)                                                                             \
 {                                                                                                            \
 	LARGE_INTEGER t1, t2, tc;                                                                                \
@@ -341,6 +343,21 @@ int main()
 		for (auto j = 0; j < width; j++)
 		{
 			cout << setw(3) << labels[i * width + j] << " ";
+		}
+		cout << endl;
+	}
+
+	cout << "Calculate CCL On CPU" <<endl;
+	CCLLECPU cclCPU;
+	int labelsUseCPU[width * height] = { 0 };
+	cclCPU.ccl(data, labelsUseCPU, width, height, degreeOfConnectivity, threshold);
+
+	cout << "Label Mesh  by CPU: " << endl;
+	for (auto i = 0; i < height; i++)
+	{
+		for (auto j = 0; j < width; j++)
+		{
+			cout << setw(3) << labelsUseCPU[i * width + j] << " ";
 		}
 		cout << endl;
 	}
