@@ -5,7 +5,12 @@
     <CudaCompile Include="CCL_LE_GPU.cu">
       <Filter>LE</Filter>
     </CudaCompile>
-    <CudaCompile Include="CCL_NP_GPU.cu" />
+    <CudaCompile Include="CCL_NP_GPU.cu">
+      <Filter>NP</Filter>
+    </CudaCompile>
+    <CudaCompile Include="CCL_DPL_GPU.cu">
+      <Filter>DPL</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
@@ -15,11 +20,22 @@
     <ClInclude Include="CCL_LE_GPU.cuh">
       <Filter>LE</Filter>
     </ClInclude>
-    <ClInclude Include="CCL_NP_GPU.cuh" />
+    <ClInclude Include="CCL_NP_GPU.cuh">
+      <Filter>NP</Filter>
+    </ClInclude>
+    <ClInclude Include="CCL_DPL_GPU.cuh">
+      <Filter>DPL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="LE">
       <UniqueIdentifier>{a123b56b-e585-4ad0-93a5-c7d3dbdf7912}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NP">
+      <UniqueIdentifier>{35288b5e-88a7-4042-888a-dbc12e359cab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DPL">
+      <UniqueIdentifier>{d336036b-2ceb-4fa8-9089-abea43484e17}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

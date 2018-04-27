@@ -152,11 +152,13 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="CCL_DPL_GPU.cu" />
     <CudaCompile Include="CCL_NP_GPU.cu" />
     <CudaCompile Include="example.cpp" />
     <CudaCompile Include="CCL_LE_GPU.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CCL_DPL_GPU.cuh" />
     <ClInclude Include="CCL_LE_CPU.hpp" />
     <ClInclude Include="CCL_NP_GPU.cuh" />
     <ClInclude Include="common.h" />

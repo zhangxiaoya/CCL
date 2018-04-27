@@ -1,6 +1,7 @@
 #include "CCL_LE_CPU.hpp"
 #include "CCL_LE_GPU.cuh"
 #include "CCL_NP_GPU.cuh"
+#include "CCL_DPL_GPU.cuh"
 
 #include "common.h"
 
@@ -109,6 +110,19 @@ int main()
 	CheckPerf(cclnp.CudaCCL(data, labels, width, height, degreeOfConnectivity, threshold), "CCL_NP_GPU");
 
 	cout << "Label Mesh by CCL NP : " << endl;
+	for (auto i = 0; i < height; i++)
+	{
+		for (auto j = 0; j < width; j++)
+		{
+			cout << setw(3) << labels[i * width + j] << " ";
+		}
+		cout << endl;
+	}
+
+	CCLDPLGPU ccldpl;
+	CheckPerf(ccldpl.CudaCCL(data, labels, width, height, degreeOfConnectivity, threshold), "CCL_DPL_GPU");
+
+	cout << "Label Mesh by CCL DPL : " << endl;
 	for (auto i = 0; i < height; i++)
 	{
 		for (auto j = 0; j < width; j++)
