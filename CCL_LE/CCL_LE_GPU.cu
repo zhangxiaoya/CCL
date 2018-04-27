@@ -68,7 +68,8 @@ __global__ void scanning8(unsigned char frame[], int labelList[], int reference[
 
 	int id = x + y * blockDim.x * gridDim.x;
 
-	if (id >= N) return;
+	if (id >= N)
+		return;
 
 	unsigned char value = frame[id];
 	int label = N;

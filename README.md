@@ -4,6 +4,8 @@
 
 这是关于CCL(Connected Component Label)的算法实现，目前只包含了其中的一个算法。详细的论文描述在[Parallel graph component labelling with GPUs and CUDA](https://www.sciencedirect.com/science/article/pii/S0167819110001055).
 
+关于CCL的介绍在[WIKI](https://en.wikipedia.org/wiki/Connected-component_labeling).
+
 ## 使用
 算法实现在CCL_LE_GPU.cu和CCL_LE_GPU.cuh中，其他的都是测试或者辅助文件，具体的使用在example文件中。
 初始化一个Mesh结构的原始数据：
