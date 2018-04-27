@@ -8,6 +8,10 @@
 
 ## 使用
 算法实现在CCL_LE_GPU.cu和CCL_LE_GPU.cuh中，其他的都是测试或者辅助文件，具体的使用在example文件中。
+
+**更新：**
+增加两种CCL实现方法，分别在CCL_NP.cu和CCL_DPL.cu文件中，定义分别在其cuh文件中。
+
 初始化一个Mesh结构的原始数据：
 ```
   2   1   1   1   1   1   1   0   0
