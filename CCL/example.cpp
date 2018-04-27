@@ -1,7 +1,7 @@
-#include "CCL_LE_CPU.hpp"
-#include "CCL_LE_GPU.cuh"
-#include "CCL_NP_GPU.cuh"
-#include "CCL_DPL_GPU.cuh"
+#include "LE/CCL_LE_CPU.hpp"
+#include "LE/CCL_LE_GPU.cuh"
+#include "NP/CCL_NP_GPU.cuh"
+#include "DPL/CCL_DPL_GPU.cuh"
 
 #include "common.h"
 
