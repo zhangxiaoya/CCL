@@ -1,4 +1,7 @@
 #pragma once
+#include <windows.h>
+#include <ctime>
+
 #define CheckPerf(call, message)                                                                             \
 {                                                                                                            \
 	LARGE_INTEGER t1, t2, tc;                                                                                \

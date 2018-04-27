@@ -39,9 +39,9 @@ private:
 
 	inline bool scanning8(unsigned char* frameData, int* labelList, int* reference, bool& modificationFlag, int N, int width, unsigned char threshold) const;
 
-	static inline void analysis(int* labelList, int* reference, int N);
+	inline void analysis(int* labelList, int* reference, int N) const;
 
-	static inline void labeling(int* labelList, int* reference, int N);
+	inline void labeling(int* labelList, int* reference, int N) const;
 };
 
 
@@ -153,7 +153,7 @@ inline bool CCLLECPU::scanning8(unsigned char* frameData, int* labelList, int* r
 	return modificationFlag;
 }
 
-inline void CCLLECPU::analysis(int* labelList, int* reference, int N)
+inline void CCLLECPU::analysis(int* labelList, int* reference, int N) const
 {
 	for (auto id = 0; id < N; id++)
 	{
@@ -172,7 +172,7 @@ inline void CCLLECPU::analysis(int* labelList, int* reference, int N)
 	}
 }
 
-inline void CCLLECPU::labeling(int* labelList, int* reference, int N)
+inline void CCLLECPU::labeling(int* labelList, int* reference, int N) const
 {
 	for (auto id = 0; id < N; id++)
 	{
